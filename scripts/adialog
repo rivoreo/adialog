@@ -1,0 +1,132 @@
+#!/system/bin/sh
+
+# adialog
+# Copyright 2015-2016 Rivoreo
+
+# This program is free software; you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation; either version 2 of the License, or (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
+
+ADIALOG_UID=10055
+ADIALOG_BROADCAST_URI=org.rivoreo.adialog/.RequestReceiver
+PIPE_PATH=/data/adialog.pipe.$$
+
+unset type
+unset text
+unset title
+unset buttions
+argv0="`basename $0`"
+
+print_usage() {
+	echo "Usage:" 1>&2
+	echo "	$argv0 <messagebox type> --text <text> [--title <title>] [--buttons <n>] [--double-button]" 1>&2
+	echo "	$argv0 --file-selection --text <text> [--title <title>] [--multiple]" 1>&2
+	echo 1>&2
+}
+
+i=0
+while [ $i -le $# ]; do
+	#case "${${i}}" in
+	eval "arg=\"\$$i\""
+	case "$arg" in
+		--question)
+			type=question
+			;;
+		--information)
+			type=information
+			;;
+		--warning)
+			type=warning
+			;;
+		--error)
+			type=error
+			;;
+		--title)
+			i=$((i+1))
+			if [ $i -gt $# ]; then
+				echo "$argv0: option --title requires an argument" 1>&2
+				exit 255
+			fi
+			eval "title=\"\$$i\""
+			;;
+		--text)
+			i=$((i+1))
+			if [ $i -gt $# ]; then
+				echo "$argv0: option --text requires an argument" 1>&2
+				exit 255
+			fi
+			eval "text=\"\$$i\""
+			;;
+		--buttons)
+			i=$((i+1))
+			if [ $i -gt $# ]; then
+				echo "$argv0: option --buttons requires an argument" 1>&2
+				exit 255
+			fi
+			eval "buttons=\"\$$i\""
+			;;
+		--double-button)
+			buttons=2
+			;;
+		-h|--help)
+			print_usage
+			exit 0
+			;;
+		-*)
+			echo "$argv0: unknown option $1" 1>&2
+			exit 255
+			;;
+	esac
+	i=$((i+1))
+done
+
+if [ -z "$type" ]; then
+	echo "$argv0: need type" 1>&2
+	#print_usage
+	echo "Try '--help' for more information"
+	exit 255
+fi
+if [ -z "$text" ]; then
+	echo "$argv0: text is required" 1>&2
+	#print_usage
+	echo "Try '--help' for more information"
+	exit 255
+fi
+
+if [ -e "$PIPE_PATH" ]; then
+	#if [ ! -p "$PIPE_PATH" ]; then
+		unlink "$PIPE_PATH" || exit
+	#	mkfifo "$PIPE_PATH"
+	fi
+#else
+	mkfifo "$PIPE_PATH"
+#fi
+chown $ADIALOG_UID "$PIPE_PATH"
+chmod 200 "$PIPE_PATH"
+trap "rm -f $PIPE_PATH; exit" INT
+
+export PATH=/system/bin:/sbin
+export LD_LIBRARY_PATH=/system/lib
+export CLASSPATH=/system/framework/am.jar
+
+am_command_line="broadcast -d \"$PIPE_PATH\" -a $type -e text \"$text\""
+[ -n "$title" ] && am_command_line="$am_command_line -e title \"$title\""
+[ $type = question -o $type = information -o $type = warning -o $type = error ] && [ -n "$buttons" ] && am_command_line="$am_command_line --ei buttons \"$buttons\""
+am_command_line="$am_command_line $ADIALOG_BROADCAST_URI"
+#echo "debug: am_command_line = $am_command_line" 1>&2
+if ! eval "broadcast_output=\"\`app_process /system/bin com.android.commands.am.Am $am_command_line\`\""; then
+	echo "$broadcast_output" 1>&2
+	exit 2
+fi
+broadcast_result="`echo $broadcast_output | grep -Eo 'result=[0-9]+' | grep -Eo '[0-9]+'`"
+#echo "broadcast_output = $broadcast_output" 1>&2
+if [ -z "$broadcast_result" ] || [ "$broadcast_result" = 255 ]; then
+	rm -f "$PIPE_PATH"
+	echo -n "$argv0: " 1>&2
+	echo "$broadcast_output" | grep -Eo 'data=".+"' 1>&2
+	exit 2
+fi
+
+read r < "$PIPE_PATH"
+rm -f "$PIPE_PATH"
+exit $r
