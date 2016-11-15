@@ -24,7 +24,7 @@ print_usage() {
 	echo 1>&2
 }
 
-i=0
+i=1
 while [ $i -le $# ]; do
 	#case "${${i}}" in
 	eval "arg=\"\$$i\""
