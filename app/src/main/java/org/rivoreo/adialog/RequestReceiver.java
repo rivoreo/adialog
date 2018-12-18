@@ -18,7 +18,6 @@ import android.net.Uri;
 import android.os.Looper;
 import android.util.Log;
 import android.view.WindowManager;
-
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
@@ -94,7 +93,7 @@ public class RequestReceiver extends BroadcastReceiver implements DialogInterfac
 			setResultData("Dialog should now shown, I will write results into " + pipe_path.toString());
 			setResultCode(1);
 
-/* It is OK to use AlertDialog, no need to create class MessageBox
+/* It is OK to use AlertDialog, no need to startActivity MessageBox
 			if(intent.getStringExtra("text") == null) {
 				setResultData("'text' is required");
 				setResultCode(0);

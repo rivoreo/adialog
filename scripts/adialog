@@ -26,8 +26,7 @@ print_usage() {
 
 i=0
 while [ $i -le $# ]; do
-	#case "${${i}}" in
-	eval "arg=\"\$$i\""
+	eval "arg=\"\${$i}\""
 	case "$arg" in
 		--question)
 			type=question
@@ -47,7 +46,7 @@ while [ $i -le $# ]; do
 				echo "$argv0: option --title requires an argument" 1>&2
 				exit 255
 			fi
-			eval "title=\"\$$i\""
+			eval "title=\"\${$i}\""
 			;;
 		--text)
 			i=$((i+1))
@@ -55,7 +54,7 @@ while [ $i -le $# ]; do
 				echo "$argv0: option --text requires an argument" 1>&2
 				exit 255
 			fi
-			eval "text=\"\$$i\""
+			eval "text=\"\${$i}\""
 			;;
 		--buttons)
 			i=$((i+1))
@@ -63,7 +62,7 @@ while [ $i -le $# ]; do
 				echo "$argv0: option --buttons requires an argument" 1>&2
 				exit 255
 			fi
-			eval "buttons=\"\$$i\""
+			eval "buttons=\"\${$i}\""
 			;;
 		--double-button)
 			buttons=2
